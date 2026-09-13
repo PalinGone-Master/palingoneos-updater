@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Palin Gone Os Updater
+Comment=Gestionnaire de mise à jour de PalinGoneOS
+Type=Application
+Icon=com.palingoneos.updater
+Exec=palin-gone-os-updater %F
+Terminal=false
+StartupNotify=true
+Categories=COSMIC
+Keywords=COSMIC
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicHoverPopup=Auto
+MimeType=
