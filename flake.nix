@@ -18,6 +18,7 @@
             lockFile = ./Cargo.lock;
             outputHashes = {
               "accesskit-0.22.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+              "atomicwrites-0.4.2" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
             };
           };
 
