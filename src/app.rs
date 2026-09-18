@@ -9,9 +9,14 @@ use cosmic::iced::{futures, window::Id, Limits, Subscription};
 use cosmic::prelude::*;
 use cosmic::widget;
 use futures::SinkExt;
-use std::process::Command;
+use serde::Deserialize;
 
 const PALINGONE_LOGO: &[u8] = include_bytes!("../resources/icon.svg");
+
+#[derive(Deserialize)]
+struct Release {
+    tag_name: String,
+}
 
 #[derive(Debug, Clone)]
 enum UpdateStatus {
@@ -99,79 +104,76 @@ impl cosmic::Application for AppModel {
             .into()
     }
 
-   fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-    let mut content = widget::column(vec![
-        widget::text::title3("PalinGoneOS Update").into(),
-    ]);
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
+        let mut content = widget::column(vec![
+            widget::text::title3("PalinGoneOS Update").into(),
+        ]);
 
-    match &self.update_status {
-        UpdateStatus::Checking => {
-            content = content.push(
-                widget::text("Vérification des mises à jour…"),
-            );
-        }
+        match &self.update_status {
+            UpdateStatus::Checking => {
+                content = content.push(
+                    widget::text("Vérification des mises à jour…"),
+                );
+            }
 
-        UpdateStatus::UpToDate(version) => {
-            content = content.push(
-                widget::text(format!(
-                    "✓ PalinGoneOS est à jour\nVersion {}",
-                    version
-                )),
-            );
-        }
-
-        UpdateStatus::UpdateAvailable(version) => {
-            content = content
-                .push(
+            UpdateStatus::UpToDate(version) => {
+                content = content.push(
                     widget::text(format!(
-                        "↑ Mise à jour disponible\nVersion {}",
+                        "✓ PalinGoneOS est à jour\nVersion {}",
                         version
                     )),
-                )
-                .push(
-                    widget::button::suggested("Mettre à jour")
-                        .on_press(Message::StartUpdate(version.clone())),
                 );
+            }
+
+            UpdateStatus::UpdateAvailable(version) => {
+                content = content
+                    .push(
+                        widget::text(format!(
+                            "↑ Mise à jour disponible\nVersion {}",
+                            version
+                        )),
+                    )
+                    .push(
+                        widget::button::suggested("Mettre à jour")
+                            .on_press(Message::StartUpdate(version.clone())),
+                    );
+            }
+
+            UpdateStatus::Error(error) => {
+                content = content.push(
+                    widget::text(format!("Erreur :\n{}", error)),
+                );
+            }
+       
+            UpdateStatus::Updating(version) => {
+                content = content.push(
+                    widget::text(format!(
+                        "Mise à jour de PalinGoneOS en cours…\nVersion {}",
+                        version
+                    )),
+                );
+            }
+
+            UpdateStatus::UpdateSucceeded(version) => {
+                content = content.push(
+                    widget::text(format!(
+                        "✓ PalinGoneOS a été mis à jour\nVersion {}",
+                        version
+                    )),
+                );
+            }
         }
 
-        UpdateStatus::Error(error) => {
-            content = content.push(
-                widget::text(format!("Erreur :\n{}", error)),
-            );
-        }
-   
-        UpdateStatus::Updating(version) => {
-            content = content.push(
-                widget::text(format!(
-                    "Mise à jour de PalinGoneOS en cours…\nVersion {}",
-                    version
-                )),
-            );
-        }
-
-        UpdateStatus::UpdateSucceeded(version) => {
-            content = content.push(
-                widget::text(format!(
-                    "✓ PalinGoneOS a été mis à jour\nVersion {}",
-                    version
-                )),
-            );
-        }
+        self.core.applet.popup_container(content).into()
     }
 
-    self.core.applet.popup_container(content).into()
-}
-
     fn subscription(&self) -> Subscription<Self::Message> {
-       
-
         Subscription::batch(vec![
             Subscription::run(|| {
                 cosmic::iced::stream::channel(
                     4,
                     move |mut channel: futures::channel::mpsc::Sender<_>| async move {
                         _ = channel.send(Message::SubscriptionChannel).await;
-
                         futures::future::pending().await
                     },
                 )
@@ -183,69 +185,69 @@ impl cosmic::Application for AppModel {
         ])
     }
 
-fn update(
-    &mut self,
-    message: Self::Message,
-) -> Task<cosmic::Action<Self::Message>> {
-    match message {
-        Message::SubscriptionChannel => {}
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> Task<cosmic::Action<Self::Message>> {
+        match message {
+            Message::SubscriptionChannel => {}
 
-        Message::UpdateConfig(config) => {
-            self.config = config;
-        }
+            Message::UpdateConfig(config) => {
+                self.config = config;
+            }
 
-        Message::UpdateCheckFinished(status) => {
-            self.update_status = status;
-        }
+            Message::UpdateCheckFinished(status) => {
+                self.update_status = status;
+            }
 
-        Message::UpdateFinished(status) => {
-            self.update_status = status;
-        }
+            Message::UpdateFinished(status) => {
+                self.update_status = status;
+            }
 
-        Message::StartUpdate(version) => {
-            self.update_status = UpdateStatus::Updating(version.clone());
+            Message::StartUpdate(version) => {
+                self.update_status = UpdateStatus::Updating(version.clone());
 
-            return Task::perform(
-                run_update(version),
-                Message::UpdateFinished,
-            )
-            .map(cosmic::Action::App);
-        }
+                return Task::perform(
+                    run_update(version),
+                    Message::UpdateFinished,
+                )
+                .map(cosmic::Action::App);
+            }
 
-        Message::TogglePopup => {
-            return if let Some(p) = self.popup.take() {
-                destroy_popup(p)
-            } else {
-                let new_id = Id::unique();
-                self.popup.replace(new_id);
+            Message::TogglePopup => {
+                return if let Some(p) = self.popup.take() {
+                    destroy_popup(p)
+                } else {
+                    let new_id = Id::unique();
+                    self.popup.replace(new_id);
 
-                let mut popup_settings = self.core.applet.get_popup_settings(
-                    self.core.main_window_id().unwrap(),
-                    new_id,
-                    None,
-                    None,
-                    None,
-                );
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
 
-                popup_settings.positioner.size_limits = Limits::NONE
-                    .max_width(372.0)
-                    .min_width(300.0)
-                    .min_height(200.0)
-                    .max_height(1080.0);
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .max_width(372.0)
+                        .min_width(300.0)
+                        .min_height(200.0)
+                        .max_height(1080.0);
 
-                get_popup(popup_settings)
-            };
-        }
+                    get_popup(popup_settings)
+                };
+            }
 
-        Message::PopupClosed(id) => {
-            if self.popup.as_ref() == Some(&id) {
-                self.popup = None;
+            Message::PopupClosed(id) => {
+                if self.popup.as_ref() == Some(&id) {
+                    self.popup = None;
+                }
             }
         }
-    }
 
-    Task::none()
-}
+        Task::none()
+    }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
@@ -253,7 +255,7 @@ fn update(
 }
 
 async fn check_for_updates() -> UpdateStatus {
-    // Version actuellement installée
+    // Version actuellement installée[cite: 1]
     let local_version = match std::fs::read_to_string("/etc/palingoneos/version") {
         Ok(version) => version.trim().to_string(),
         Err(error) => {
@@ -273,110 +275,58 @@ async fn check_for_updates() -> UpdateStatus {
         ));
     }
 
-    let local_major = match local_parts[0].parse::<u32>() {
-        Ok(value) => value,
-        Err(_) => {
-            return UpdateStatus::Error(format!(
-                "Version locale invalide : {}",
-                local_version
-            ));
-        }
+    let Ok(local_major) = local_parts[0].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version locale invalide : {}", local_version));
+    };
+    let Ok(local_minor) = local_parts[1].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version locale invalide : {}", local_version));
+    };
+    let Ok(local_patch) = local_parts[2].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version locale invalide : {}", local_version));
     };
 
-    let local_minor = match local_parts[1].parse::<u32>() {
-        Ok(value) => value,
-        Err(_) => {
-            return UpdateStatus::Error(format!(
-                "Version locale invalide : {}",
-                local_version
-            ));
-        }
-    };
-
-    let local_patch = match local_parts[2].parse::<u32>() {
-        Ok(value) => value,
-        Err(_) => {
-            return UpdateStatus::Error(format!(
-                "Version locale invalide : {}",
-                local_version
-            ));
-        }
-    };
-
-    // Récupération des tags du dépôt PalinGoneOS
-    let remote_output = match Command::new("git")
-        .args([
-            "-C",
-            "/etc/nixos",
-            "ls-remote",
-            "--tags",
-            "origin",
-        ])
-        .output()
+    // Interrogation de l'API GitHub Releases via ureq avec le bon dépôt
+    let response = match ureq::get("https://api.github.com/repos/PalinGone-Master/PalinGoneOS/releases/latest")
+        .set("User-Agent", "PalinGoneOS-Updater")
+        .call() 
     {
-        Ok(output) => output,
+        Ok(resp) => resp,
         Err(error) => {
             return UpdateStatus::Error(format!(
-                "Impossible de lancer git : {}",
+                "Impossible d'interroger l'API GitHub : {}",
                 error
             ));
         }
     };
 
-    if !remote_output.status.success() {
-        let error = String::from_utf8_lossy(&remote_output.stderr);
+    let release: Release = match response.into_json() {
+        Ok(rel) => rel,
+        Err(error) => {
+            return UpdateStatus::Error(format!(
+                "Impossible de parser la réponse JSON : {}",
+                error
+            ));
+        }
+    };
 
+    let remote_version_raw = release.tag_name.trim_start_matches('v');
+    let remote_parts: Vec<&str> = remote_version_raw.split('.').collect();
+
+    if remote_parts.len() != 3 {
         return UpdateStatus::Error(format!(
-            "Impossible d'interroger le dépôt : {}",
-            error.trim()
+            "Version distante invalide : {}",
+            remote_version_raw
         ));
     }
 
-    let remote_tags = String::from_utf8_lossy(&remote_output.stdout);
-
-    let mut highest_version: Option<(u32, u32, u32)> = None;
-
-    for line in remote_tags.lines() {
-        let Some(reference) = line.split_whitespace().nth(1) else {
-            continue;
-        };
-
-        let Some(version) = reference.strip_prefix("refs/tags/v") else {
-            continue;
-        };
-
-        let parts: Vec<&str> = version.split('.').collect();
-
-        if parts.len() != 3 {
-            continue;
-        }
-
-        let Ok(major) = parts[0].parse::<u32>() else {
-            continue;
-        };
-
-        let Ok(minor) = parts[1].parse::<u32>() else {
-            continue;
-        };
-
-        let Ok(patch) = parts[2].parse::<u32>() else {
-            continue;
-        };
-
-        let candidate = (major, minor, patch);
-
-        if highest_version
-            .as_ref()
-            .is_none_or(|current| candidate > *current)
-        {
-            highest_version = Some(candidate);
-        }
-    }
-
-    let Some((remote_major, remote_minor, remote_patch)) = highest_version else {
-        return UpdateStatus::Error(
-            "Aucun tag vX.Y.Z trouvé dans le dépôt.".to_string(),
-        );
+    let Ok(remote_major) = remote_parts[0].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version distante invalide : {}", remote_version_raw));
+    };
+    let Ok(remote_minor) = remote_parts[1].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version distante invalide : {}", remote_version_raw));
+    };
+    let Ok(remote_patch) = remote_parts[2].parse::<u32>() else {
+        return UpdateStatus::Error(format!("Version distante invalide : {}", remote_version_raw));
     };
 
     let remote_version = format!(
@@ -393,12 +343,11 @@ async fn check_for_updates() -> UpdateStatus {
     }
 }
 
-
 async fn run_update(version: String) -> UpdateStatus {
     let repo = "/etc/nixos";
     let tag = format!("v{}", version);
 
-    // Récupère les tags depuis le dépôt distant.
+    // Récupère les tags depuis le dépôt distant[cite: 1].
     let fetch = match std::process::Command::new("git")
         .args(["-C", repo, "fetch", "origin", "--tags"])
         .output()
@@ -414,14 +363,13 @@ async fn run_update(version: String) -> UpdateStatus {
 
     if !fetch.status.success() {
         let error = String::from_utf8_lossy(&fetch.stderr);
-
         return UpdateStatus::Error(format!(
             "Échec de la récupération Git : {}",
             error.trim()
         ));
     }
 
-    // Vérifie que la version demandée existe bien.
+    // Vérifie que la version demandée existe bien[cite: 1].
     let tag_check = match std::process::Command::new("git")
         .args([
             "-C",
@@ -447,16 +395,16 @@ async fn run_update(version: String) -> UpdateStatus {
         ));
     }
 
-    // Le changement de /etc/nixos et le rebuild sont effectués
-    // avec les privilèges administrateur.
-    let rebuild = match std::process::Command::new("pkexec")
+    // Exécution avec capture des erreurs au lieu de les ignorer[cite: 1]
+    let output = match std::process::Command::new("pkexec")
+        .env("SHELL", "/run/current-system/sw/bin/bash")
         .args([
             "/run/current-system/sw/bin/palingoneos-update-helper",
             &version,
         ])
-        .status()
+        .output()
     {
-        Ok(status) => status,
+        Ok(output) => output,
         Err(error) => {
             return UpdateStatus::Error(format!(
                 "Impossible de lancer la mise à jour : {}",
@@ -465,11 +413,18 @@ async fn run_update(version: String) -> UpdateStatus {
         }
     };
 
-    if rebuild.success() {
+    if output.status.success() {
         UpdateStatus::UpdateSucceeded(version)
     } else {
-        UpdateStatus::Error(
-            "La mise à jour a échoué.".to_string(),
-        )
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let details = if !stderr.trim().is_empty() {
+            stderr.trim().to_string()
+        } else if !stdout.trim().is_empty() {
+            stdout.trim().to_string()
+        } else {
+            "Erreur inconnue.".to_string()
+        };
+        UpdateStatus::Error(format!("Échec :\n{}", details))
     }
 }
