@@ -17,7 +17,7 @@
           src = pkgs.fetchurl {
             url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.0/palin-gone-os-updater";
            
-            hash = "";
+            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
           };
 
           dontUnpack = true;
