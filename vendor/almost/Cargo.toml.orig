@@ -1,0 +1,18 @@
+[package]
+name = "almost"
+version = "0.2.0"
+authors = ["Thom Chiovoloni <chiovolonit@gmail.com>"]
+edition = "2018"
+license = "CC0-1.0"
+repository = "https://github.com/thomcc/almost"
+readme = "README.md"
+keywords = ["float", "equal", "approximate", "comparison"]
+categories = ["no-std"]
+description = "A crate for comparing floating point numbers"
+
+[dependencies]
+
+[dev-dependencies]
+ieee754 = "0.2.6"
+rand = { version = "0.6.5", default-features = false }
+

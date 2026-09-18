@@ -1,0 +1,351 @@
+use csscolorparser::{parse, Color};
+
+#[test]
+fn parser() {
+    let test_data = [
+        ("transparent", [0, 0, 0, 0]),
+        ("TRANSPARENT", [0, 0, 0, 0]),
+        ("#ff00ff64", [255, 0, 255, 100]),
+        ("ff00ff64", [255, 0, 255, 100]),
+        ("rgb(247,179,99)", [247, 179, 99, 255]),
+        ("rgb(50% 50% 50%)", [128, 128, 128, 255]),
+        ("rgb(247,179,99,0.37)", [247, 179, 99, 94]),
+        ("hsl(270 0% 50%)", [128, 128, 128, 255]),
+        ("hwb(0 50% 50%)", [128, 128, 128, 255]),
+        ("hsv(0 0% 50%)", [128, 128, 128, 255]),
+        ("hsv(0 0% 100%)", [255, 255, 255, 255]),
+        ("hsv(0 0% 19%)", [48, 48, 48, 255]),
+    ];
+
+    for (s, expected) in test_data {
+        let a = parse(s).unwrap().to_rgba8();
+        let b = s.parse::<Color>().unwrap().to_rgba8();
+        let c = Color::from_html(s).unwrap().to_rgba8();
+        assert_eq!(expected, a);
+        assert_eq!(expected, b);
+        assert_eq!(expected, c);
+    }
+
+    let test_data = [
+        ("lab(0% 0 0)", [0, 0, 0, 255]),
+        ("lab(100% 0 0)", [255, 255, 255, 255]),
+        ("lab(0% 0 0 / 0.5)", [0, 0, 0, 128]),
+        ("lch(0% 0 0)", [0, 0, 0, 255]),
+        ("lch(100% 0 0)", [255, 255, 255, 255]),
+        ("lch(0% 0 0 / 0.5)", [0, 0, 0, 128]),
+    ];
+
+    for (s, expected) in test_data {
+        assert_eq!(expected, parse(s).unwrap().to_rgba8());
+    }
+}
+
+#[test]
+fn equal() {
+    let test_data = [
+        ("transparent", "rgb(0,0,0,0%)"),
+        ("#FF9900", "#f90"),
+        ("#aabbccdd", "#ABCD"),
+        ("#BAD455", "BAD455"),
+        ("rgb(0 255 127 / 75%)", "rgb(0,255,127,0.75)"),
+        ("hwb(180 0% 60%)", "hwb(180,0%,60%)"),
+        ("hwb(290 30% 0%)", "hwb(290 0.3 0)"),
+        ("hsl(180,50%,27%)", "hsl(180,0.5,0.27)"),
+        ("rgb(255, 165, 0)", "hsl(38.824 100% 50%)"),
+        ("#7654CD", "rgb(46.27% 32.94% 80.39%)"),
+        (&nested_calc(32), "#a26400"),
+        //#[cfg(feature = "lab")]
+        //("#7654CD", "lab(44.36% 36.05 -58.99)"),
+    ];
+
+    for (a, b) in test_data {
+        let c1 = parse(a).unwrap();
+        let c2 = parse(b).unwrap();
+        assert_eq!(c1.to_rgba8(), c2.to_rgba8(), "{:?}", [a, b]);
+    }
+}
+
+#[test]
+fn black() {
+    let data = [
+        "#000",
+        "#000f",
+        "#000000",
+        "#000000ff",
+        "000",
+        "000f",
+        "000000",
+        "000000ff",
+        "rgb(0,0,0)",
+        "rgb(0% 0% 0%)",
+        "rgb(0 0 0 100%)",
+        "hsl(270,100%,0%)",
+        "hwb(90 0% 100%)",
+        "hwb(120deg 0% 100% 100%)",
+        "hsv(120 100% 0%)",
+        "oklab(0 0 0)",
+        "oklch(0 0 180)",
+    ];
+
+    let black = [0, 0, 0, 255];
+
+    for s in data {
+        let c = parse(s).unwrap().to_rgba8();
+        assert_eq!(black, c);
+    }
+}
+
+#[test]
+fn red() {
+    let data = [
+        "#f00",
+        "#f00f",
+        "#ff0000",
+        "#ff0000ff",
+        "f00",
+        "f00f",
+        "ff0000",
+        "ff0000ff",
+        "rgb(255,0,0)",
+        "rgb(255 0 0)",
+        "rgb(700, -99, 0)", // clamp to 0..255
+        "rgb(100% 0% 0%)",
+        "rgb(200% -10% -100%)", // clamp to 0%..100%
+        "rgb(255 0 0 100%)",
+        " RGB ( 255 , 0 , 0 ) ",
+        "RGB( 255   0   0 )",
+        "hsl(0,100%,50%)",
+        "hsl(360 100% 50%)",
+        "hwb(0 0% 0%)",
+        "hwb(360deg 0% 0% 100%)",
+        "hwb(360DEG 0% 0% 100%)",
+        "hsv(0 100% 100%)",
+        "oklab(0.62796, 0.22486, 0.12585)",
+        "oklch(0.62796, 0.25768, 29.23388)",
+        &nested_color(32),
+    ];
+
+    let red = [255, 0, 0, 255];
+
+    for s in data {
+        let res = parse(s);
+        assert!(res.is_ok(), "{:?}", s);
+        let c = res.unwrap().to_rgba8();
+        assert_eq!(red, c);
+    }
+}
+
+#[test]
+fn lime() {
+    let data = [
+        "#0f0",
+        "#0f0f",
+        "#00ff00",
+        "#00ff00ff",
+        "0f0",
+        "0f0f",
+        "00ff00",
+        "00ff00ff",
+        "rgb(0,255,0)",
+        "rgb(0% 100% 0%)",
+        "rgb(0 255 0 / 100%)",
+        "rgba(0,255,0,1)",
+        "hsl(120,100%,50%)",
+        "hsl(120deg 100% 50%)",
+        "hsl(-240 100% 50%)",
+        "hsl(-240deg 100% 50%)",
+        "hsl(0.3333turn 100% 50%)",
+        "hsl(0.3333TURN 100% 50%)",
+        "hsl(133.333grad 100% 50%)",
+        "hsl(133.333GRAD 100% 50%)",
+        "hsl(2.0944rad 100% 50%)",
+        "hsl(2.0944RAD 100% 50%)",
+        "hsla(120,100%,50%,100%)",
+        "hwb(120 0% 0%)",
+        "hwb(480deg 0% 0% / 100%)",
+        "hsv(120 100% 100%)",
+        "oklab(0.86644, -0.23389, 0.1795)",
+        "oklch(0.86644, 0.29483, 142.49535)",
+    ];
+
+    let lime = [0, 255, 0, 255];
+
+    for s in data {
+        let res = parse(s);
+        assert!(res.is_ok(), "{:?}", s);
+        let c = res.unwrap().to_rgba8();
+        assert_eq!(lime, c);
+    }
+}
+
+#[test]
+fn lime_alpha() {
+    let data = [
+        "#00ff0080",
+        "00ff0080",
+        "rgb(0,255,0,50%)",
+        "rgb(0% 100% 0% / 0.5)",
+        "rgba(0%,100%,0%,50%)",
+        "hsl(120,100%,50%,0.5)",
+        "hsl(120deg 100% 50% / 50%)",
+        "hsla(120,100%,50%,0.5)",
+        "hwb(120 0% 0% / 50%)",
+        "hsv(120 100% 100% / 50%)",
+    ];
+
+    let lime_alpha = [0, 255, 0, 128];
+
+    for s in data {
+        let c = parse(s).unwrap().to_rgba8();
+        assert_eq!(lime_alpha, c);
+    }
+}
+
+#[test]
+fn none_value() {
+    let test_data = [
+        ["rgb(none none none)", "#000000"],
+        ["hwb(none none none)", "#ff0000"],
+        ["hsl(none none none)", "#000000"],
+        ["lab(none none none)", "#000000"],
+        ["lch(none none none)", "#000000"],
+        ["oklab(none none none)", "#000000"],
+        ["oklch(none none none)", "#000000"],
+        ["rgb(255 0 255 / none)", "#ff00ff00"],
+        ["rgb(90 none 210)", "#5a00d2"],
+        ["rgb(255 none 50%)", "#ff0080"],
+        ["rgb(none 50% 127)", "#00807f"],
+        ["rgb(90 35% none)", "#5a5900"],
+        ["hwb(none 60% 0%)", "#ff9999"],
+        ["hwb(137 55% none)", "#8cffad"],
+        ["hsl(none 45% 55%)", "#c05959"],
+        ["lab(50% -75 none)", "#009275"],
+        ["lch(50% 100 none)", "#ff007b"], // xxx
+        ["oklab(60% none -0.17)", "#5a76e4"],
+        ["oklch(60% 0.2 none)", "#d7397b"],
+    ];
+    for [s, hex] in test_data {
+        let c = parse(s);
+        assert!(c.is_ok(), "{:?}", s);
+        assert_eq!(c.unwrap().to_css_hex(), hex, "{:?}", s);
+    }
+}
+
+#[cfg(feature = "named-colors")]
+#[test]
+fn invalid_format() {
+    let test_data = [
+        "",
+        "bloodred",
+        "#78afzd",
+        "#fffff",
+        "rgb(255,0,0",
+        "rgb(0,255,8s)",
+        "rgb(100%,z9%,75%)",
+        //"rgb(255,0,0%)",  // mix format
+        //"rgb(70%,30%,0)", // mix format
+        "rgb(255 0 0 0 0)",
+        "rgb(255 0 0 0 / 0)",
+        "rgb(,255,0,0)",
+        "rgb(255,0,,0)",
+        "rgb(255,0,0,)",
+        "rgb(255,0,0/)",
+        "rgb(255/0,0)",
+        "cmyk(1 0 0)",
+        "rgba(0 0)",
+        "hsl(90',100%,50%)",
+        "hsl(360,70%,50%,90%,100%)",
+        "hsl(deg 100% 50%)",
+        "hsl(Xturn 100% 50%)",
+        "hsl(Zgrad 100% 50%)",
+        "hsl(180 1 x%)",
+        //"hsl(360,0%,0)", // mix format
+        "hsla(360)",
+        "hwb(Xrad,50%,50%)",
+        "hwb(270 0% 0% 0% 0%)",
+        //"hwb(360,0,20%)", // mix format
+        "hsv(120 100% 100% 1 50%)",
+        "hsv(120 XXX 100%)",
+        //"hsv(120,100%,0.5)", //mix format
+        "lab(100%,0)",
+        "lab(100% 0 X)",
+        "lch(100%,0)",
+        "lch(100% 0 X)",
+        "oklab(0,0)",
+        "oklab(0,0,x,0)",
+        "oklch(0,0,0,0,0)",
+        "oklch(0,0,0,x)",
+        "æ",
+        "#ß",
+        "rgb(ß,0,0)",
+        "\u{1F602}",
+        "#\u{1F602}",
+        "rgb(\u{1F602},\u{1F602},\u{1F602})",
+        "#a+5",
+        "#+abc",
+        "#+1+2+3",
+        "#+1+2+3+4",
+        "#+a+b+c",
+        "ab+",
+        "abc+",
+        "+1+2+3",
+        "+a+b+c+d",
+        &nested_color(33),
+        &nested_color(99),
+        &nested_calc(33),
+        &nested_calc(99),
+        // nan & infinite number
+        "rgb(nan 0 0)",
+        "oklch(0.5 0.1 nan)",
+        "rgb(inf 0 0)",
+        "hsl(1e400deg 100% 50%)",
+    ];
+
+    for s in test_data {
+        let c = parse(s);
+        assert!(c.is_err(), "{:?}", s);
+    }
+
+    #[rustfmt::skip]
+    let test_data = [
+        ("#78afzd",          "invalid hex format"),
+        ("rgb(xx,yy,xx)",    "invalid rgb format"),
+        ("rgb(255,0)",       "invalid rgb format"),
+        ("hsl(0,100%,2o%)",  "invalid hsl format"),
+        ("hsv(360)",         "invalid hsv format"),
+        ("hwb(270,0%,0%,x)", "invalid hwb format"),
+        ("lab(0%)",          "invalid lab format"),
+        ("lch(0%)",          "invalid lch format"),
+        ("oklab(9 20)",      "invalid oklab format"),
+        ("oklch()",          "invalid oklch format"),
+        ("cmyk(0,0,0,0)",    "invalid color function"),
+        ("blood",            "invalid unknown format"),
+        ("rgb(255,0,0",      "invalid unknown format"),
+        ("x£",               "invalid unknown format"),
+        ("x£x",              "invalid unknown format"),
+        ("xxx£x",            "invalid unknown format"),
+        ("xxxxx£x",          "invalid unknown format"),
+        ("\u{1F602}",        "invalid unknown format"),
+    ];
+
+    for (s, err_msg) in test_data {
+        let c = parse(s);
+        assert_eq!(c.unwrap_err().to_string(), err_msg, "{:?}", s);
+    }
+}
+
+fn nested_color(depth: usize) -> String {
+    let mut s = String::from("#ff0000");
+    for _ in 0..depth {
+        s = format!("rgb(from {s} r g b)");
+    }
+    s
+}
+
+fn nested_calc(depth: usize) -> String {
+    let mut s = String::from("(3 - 1)");
+    for _ in 0..depth {
+        s = format!("(5 + {s})");
+    }
+    format!("rgb(from #000 calc{s} 100 0)")
+}

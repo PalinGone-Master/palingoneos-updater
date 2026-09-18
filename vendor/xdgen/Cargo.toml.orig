@@ -1,0 +1,12 @@
+[package]
+name = "xdgen"
+description = "Generate localized XDG metadata for an application"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+
+[dependencies]
+fluent = "0.17"
+freedesktop_entry_parser = "2"
+unic-langid = "0.9"
+xmltree = "0.12"

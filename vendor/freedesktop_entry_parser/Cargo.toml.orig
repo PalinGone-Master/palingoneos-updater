@@ -1,0 +1,28 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+[package]
+name = "freedesktop_entry_parser"
+version = "2.0.1"
+authors = ["Sashanoraa <sasha@noraa.gay>"]
+description = "A library for parsing FreeDesktop entry files and Systemd unit files"
+categories = ["parser-implementations"]
+keywords = ["linux", "icons", "freedesktop", "systemd", "parser"]
+homepage = "https://codeberg.org/sashanoraa/freedesktop_entry_parser"
+repository = "https://codeberg.org/sashanoraa/freedesktop_entry_parser.git"
+edition = "2021"
+license = "MPL-2.0"
+include = ["/src/**/*", "/LICENSE", "/README.md", "/examples/**/*", "/test_data/**/*"]
+rust-version = "1.65"
+
+# [badges.maintenance]
+# status = "passively-maintained"
+
+[features]
+default = [ "high_level" ]
+high_level = [ "dep:indexmap" ]
+
+[dependencies]
+nom = "8.0.0"
+indexmap = { version = "=2.11.4", optional = true } # Pinned to maintain MSRV

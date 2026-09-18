@@ -1,0 +1,51 @@
+[package]
+name = "csscolorparser"
+version = "0.8.4"
+authors = ["Nor Khasyatillah <mazznoer@ymail.com>"]
+edition = "2018"
+rust-version = "1.85"
+description = "CSS color parser library"
+readme = "README.md"
+repository = "https://github.com/mazznoer/csscolorparser-rs"
+documentation = "https://docs.rs/csscolorparser/"
+license = "MIT OR Apache-2.0"
+keywords = ["color", "colour", "css", "parser"]
+categories = ["graphics", "parser-implementations", "no-std"]
+exclude = [
+	".github/*",
+]
+
+[package.metadata.docs.rs]
+features = ["named-colors", "rust-rgb", "cint", "serde", "std"]
+
+[features]
+default = ["named-colors", "std"]
+
+cint = ["dep:cint"]
+named-colors = ["dep:phf", "dep:uncased"]
+rust-rgb = ["dep:rgb"]
+serde = ["dep:serde"]
+std = ["phf?/std", "serde?/std"]
+
+[dependencies]
+cint = { version = "^0.3.1", optional = true }
+num-traits = { version = "0.2.19", default-features = false, features = ["libm"] }
+phf = { version = "0.13.1", optional = true, default-features = false, features = ["macros", "uncased"] }
+rgb = { version = "0.8.33", optional = true }
+serde = { version = "1.0.139", optional = true, default-features = false, features = ["derive"] }
+uncased = { version = "0.9.10", optional = true, default-features = false }
+
+[dev-dependencies]
+serde_test = "1.0.139"
+
+[[test]]
+name = "named_colors"
+required-features = ["named-colors"]
+
+[[example]]
+name = "cli"
+required-features = ["named-colors"]
+
+[[example]]
+name = "named-colors"
+required-features = ["named-colors"]
