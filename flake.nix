@@ -16,7 +16,7 @@
           src = ./.;
 
           # Mettez un faux hash temporaire, Nix vous donnera le bon au premier essai
-          cargoHash = "sha256-u5yq+KnhkNph+VcmfM6CKB/JxtSorr7oaj5/YFQ8DTE=";
+          cargoHash = "";
         };
       }
     );
