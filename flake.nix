@@ -9,6 +9,21 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in
     {
+      packages.${system}.palin-gone-os-updater = pkgs.rustPlatform.buildRustPackage {
+        pname = "palin-gone-os-updater";
+        version = "1.0.0"; # Ajustez selon votre version
+        src = ./.;
+        cargoLock.lockFile = ./Cargo.lock;
+
+        nativeBuildInputs = [ pkgs.pkg-config ];
+        buildInputs = [ 
+          pkgs.wayland 
+          pkgs.libxkbcommon 
+        ];
+      };
+
+      packages.${system}.default = self.packages.${system}.palin-gone-os-updater;
+
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           rustc
