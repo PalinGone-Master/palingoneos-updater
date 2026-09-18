@@ -18,6 +18,8 @@ enum UpdateStatus {
     Checking,
     UpToDate(String),
     UpdateAvailable(String),
+    Updating(String),
+    UpdateSucceeded(String),
     Error(String),
 }
 
@@ -43,6 +45,7 @@ pub enum Message {
     UpdateConfig(Config),
     UpdateCheckFinished(UpdateStatus),
     StartUpdate(String),
+    UpdateFinished(UpdateStatus),
 }
 
 impl cosmic::Application for AppModel {
@@ -136,13 +139,31 @@ impl cosmic::Application for AppModel {
                 widget::text(format!("Erreur :\n{}", error)),
             );
         }
+   
+        UpdateStatus::Updating(version) => {
+            content = content.push(
+                widget::text(format!(
+                    "Mise à jour de PalinGoneOS en cours…\nVersion {}",
+                    version
+                )),
+            );
+        }
+
+        UpdateStatus::UpdateSucceeded(version) => {
+            content = content.push(
+                widget::text(format!(
+                    "✓ PalinGoneOS a été mis à jour\nVersion {}",
+                    version
+                )),
+            );
+        }
     }
 
     self.core.applet.popup_container(content).into()
 }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        struct MySubscription;
+       
 
         Subscription::batch(vec![
             Subscription::run(|| {
@@ -162,63 +183,69 @@ impl cosmic::Application for AppModel {
         ])
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> Task<cosmic::Action<Self::Message>> {
-        match message {
-            Message::SubscriptionChannel => {}
+fn update(
+    &mut self,
+    message: Self::Message,
+) -> Task<cosmic::Action<Self::Message>> {
+    match message {
+        Message::SubscriptionChannel => {}
 
-            Message::UpdateConfig(config) => {
-                self.config = config;
-            }
-
-            Message::UpdateCheckFinished(status) => {
-                self.update_status = status;
-            }
-            Message::StartUpdate(version) => {
-                println!("Mise à jour demandée : {}", version);
-
-                let _ = Command::new("pkexec")
-                    .args([
-                        "/run/current-system/sw/bin/palingoneos-update-helper",
-                    ])
-                    .status();
-            }
-            Message::TogglePopup => {
-                return if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
-                } else {
-                    let new_id = Id::unique();
-                    self.popup.replace(new_id);
-
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
-
-                    get_popup(popup_settings)
-                };
-            }
-
-            Message::PopupClosed(id) => {
-                if self.popup.as_ref() == Some(&id) {
-                    self.popup = None;
-                }
-            }
+        Message::UpdateConfig(config) => {
+            self.config = config;
         }
 
-        Task::none()
+        Message::UpdateCheckFinished(status) => {
+            self.update_status = status;
+        }
+
+        Message::UpdateFinished(status) => {
+            self.update_status = status;
+        }
+
+        Message::StartUpdate(version) => {
+            self.update_status = UpdateStatus::Updating(version.clone());
+
+            return Task::perform(
+                run_update(version),
+                Message::UpdateFinished,
+            )
+            .map(cosmic::Action::App);
+        }
+
+        Message::TogglePopup => {
+            return if let Some(p) = self.popup.take() {
+                destroy_popup(p)
+            } else {
+                let new_id = Id::unique();
+                self.popup.replace(new_id);
+
+                let mut popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+
+                popup_settings.positioner.size_limits = Limits::NONE
+                    .max_width(372.0)
+                    .min_width(300.0)
+                    .min_height(200.0)
+                    .max_height(1080.0);
+
+                get_popup(popup_settings)
+            };
+        }
+
+        Message::PopupClosed(id) => {
+            if self.popup.as_ref() == Some(&id) {
+                self.popup = None;
+            }
+        }
     }
+
+    Task::none()
+}
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
@@ -366,11 +393,83 @@ async fn check_for_updates() -> UpdateStatus {
     }
 }
 
-fn extract_json_value(json: &str, key: &str) -> Option<String> {
-    let pattern = format!("\"{}\":\"", key);
-    let start = json.find(&pattern)? + pattern.len();
-    let remaining = &json[start..];
-    let end = remaining.find('"')?;
 
-    Some(remaining[..end].to_string())
+async fn run_update(version: String) -> UpdateStatus {
+    let repo = "/etc/nixos";
+    let tag = format!("v{}", version);
+
+    // Récupère les tags depuis le dépôt distant.
+    let fetch = match std::process::Command::new("git")
+        .args(["-C", repo, "fetch", "origin", "--tags"])
+        .output()
+    {
+        Ok(output) => output,
+        Err(error) => {
+            return UpdateStatus::Error(format!(
+                "Impossible de récupérer les mises à jour : {}",
+                error
+            ));
+        }
+    };
+
+    if !fetch.status.success() {
+        let error = String::from_utf8_lossy(&fetch.stderr);
+
+        return UpdateStatus::Error(format!(
+            "Échec de la récupération Git : {}",
+            error.trim()
+        ));
+    }
+
+    // Vérifie que la version demandée existe bien.
+    let tag_check = match std::process::Command::new("git")
+        .args([
+            "-C",
+            repo,
+            "rev-parse",
+            &format!("refs/tags/{}", tag),
+        ])
+        .output()
+    {
+        Ok(output) => output,
+        Err(error) => {
+            return UpdateStatus::Error(format!(
+                "Impossible de vérifier {} : {}",
+                version, error
+            ));
+        }
+    };
+
+    if !tag_check.status.success() {
+        return UpdateStatus::Error(format!(
+            "La version {} n'existe pas dans le dépôt.",
+            version
+        ));
+    }
+
+    // Le changement de /etc/nixos et le rebuild sont effectués
+    // avec les privilèges administrateur.
+    let rebuild = match std::process::Command::new("pkexec")
+        .args([
+            "/run/current-system/sw/bin/palingoneos-update-helper",
+            &version,
+        ])
+        .status()
+    {
+        Ok(status) => status,
+        Err(error) => {
+            return UpdateStatus::Error(format!(
+                "Impossible de lancer la mise à jour : {}",
+                error
+            ));
+        }
+    };
+
+    if rebuild.success() {
+        UpdateStatus::UpdateSucceeded(version)
+    } else {
+        UpdateStatus::Error(
+            "La mise à jour a échoué.".to_string(),
+        )
+    }
 }
