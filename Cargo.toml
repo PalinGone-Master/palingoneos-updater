@@ -22,20 +22,14 @@ features = ["fluent-system", "desktop-requester"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
-# See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
+branch = "master" # ou un 'rev = "..."' si vous préférez un commit figé
 features = [
-    # Applet support
     "applet",
     "applet-token",
-    # Uses cosmic-settings-daemon to watch for config file changes
     "dbus-config",
-    # Support creating additional application windows.
     "multi-window",
-    # Uses tokio as the executor for the runtime
     "tokio",
-    # Add Wayland support to winit
     "wayland",
-    # Windowing support for X11, Windows, Mac, & Redox
     "winit",
 ]
 
@@ -45,5 +39,5 @@ features = [
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # cosmic-theme = { path = "../libcosmic/cosmic-theme" }
 
-[patch."https://github.com/pop-os/cosmic-protocols"]
-cosmic-protocols = { path = "./local-deps/cosmic-protocols" }
+#[patch."https://github.com/pop-os/cosmic-protocols"]
+#cosmic-protocols = { path = "./local-deps/cosmic-protocols" }
