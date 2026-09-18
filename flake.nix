@@ -14,7 +14,12 @@
           pname = "palin-gone-os-updater";
           version = "1.0.0";
           src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
+          cargoLock = {
+            lockFile = ./Cargo.lock;
+            outputHashes = {
+              "accesskit-0.22.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+            };
+          };
 
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ 
