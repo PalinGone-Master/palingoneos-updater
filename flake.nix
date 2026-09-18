@@ -10,26 +10,14 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       {
-       packages.palin-gone-os-updater = pkgs.stdenv.mkDerivation {
-         pname = "palin-gone-os-updater";
-         version = "1.1";
+        packages.palin-gone-os-updater = pkgs.rustPlatform.buildRustPackage {
+          pname = "palin-gone-os-updater";
+          version = "1.1.0";
+          src = ./.;
 
-         src = pkgs.fetchurl {
-         url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.1/palin-gone-os-updater";
-         hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-      };
-
-      dontUnpack = true;
-
-      __structuredAttrs = true;
-      unsafeDiscardReferences = { out = true; };
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp $src $out/bin/palin-gone-os-updater
-        chmod +x $out/bin/palin-gone-os-updater
-      '';
-    };
+          # Mettez un faux hash temporaire, Nix vous donnera le bon au premier essai
+          cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        };
       }
     );
 }
