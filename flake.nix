@@ -10,20 +10,23 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       {
-        packages.palin-gone-os-updater = pkgs.rustPlatform.buildRustPackage {
+        packages.palin-gone-os-updater = pkgs.stdenv.mkDerivation {
           pname = "palin-gone-os-updater";
           version = "1.0.0";
-          src = ./.;
 
-          # L'unique et suprême méthode sans hachages
-          cargoVendorDir = "vendor";
+          src = pkgs.fetchurl {
+            url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.0/LE_NOM_DU_BINAIRE";
+            # Ce faux hachage va forcer Nix à hurler et à nous donner le vrai
+            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          };
 
-          nativeBuildInputs = [ pkgs.pkg-config ];
-          buildInputs = [ pkgs.wayland pkgs.libxkbcommon ];
-        };
+          dontUnpack = true;
 
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ cargo rustc rustfmt clippy ];
+          installPhase = ''
+            mkdir -p $out/bin
+            cp $src $out/bin/palin-gone-os-updater
+            chmod +x $out/bin/palin-gone-os-updater
+          '';
         };
       }
     );
