@@ -14,15 +14,7 @@
           pname = "palin-gone-os-updater";
           version = "1.0.0";
           src = ./.;
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-            outputHashes = {
-              "accesskit-0.22.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              "atomicwrites-0.4.2" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-	      "build_helpers-0.14.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-	      "clipboard_macos-0.1.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-	      "cosmic-client-toolkit-0.2.0" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-            };
+          cargoVendorDir = "vendor";
           };
 
           nativeBuildInputs = [ pkgs.pkg-config ];
