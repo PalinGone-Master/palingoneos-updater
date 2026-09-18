@@ -41,6 +41,6 @@
           pkgs.wayland
           pkgs.libxkbcommon
         ];
-      };
+     
     };
 }
