@@ -28,7 +28,7 @@
         mkdir -p $out/bin
         cp $src $out/bin/palin-gone-os-updater
         chmod +x $out/bin/palin-gone-os-updater
-      ''
+      '';
     };
       }
     );
