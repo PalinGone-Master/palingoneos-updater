@@ -11,23 +11,26 @@
       in
       {
         packages.palin-gone-os-updater = pkgs.stdenv.mkDerivation {
-          pname = "palin-gone-os-updater";
-          version = "1.0.0";
+      pname = "palin-gone-os-updater";
+      version = "1.1";
 
-          src = pkgs.fetchurl {
-            url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.0/palin-gone-os-updater";
-           
-            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          };
+      src = pkgs.fetchurl {
+        url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.1/palin-gone-os-updater";
+        hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      };
 
-          dontUnpack = true;
+      dontUnpack = true;
 
-          installPhase = ''
-            mkdir -p $out/bin
-            cp $src $out/bin/palin-gone-os-updater
-            chmod +x $out/bin/palin-gone-os-updater
-          '';
-        };
+      # L'immunité diplomatique exigée par Nix :
+      __structuredAttrs = true;
+      unsafeDiscardReferences.out = true;
+
+      installPhase = ''
+        mkdir -p $out/bin
+        cp $src $out/bin/palin-gone-os-updater
+        chmod +x $out/bin/palin-gone-os-updater
+      '';
+    };
       }
     );
 }
