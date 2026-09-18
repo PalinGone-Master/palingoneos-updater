@@ -16,8 +16,8 @@
 
           src = pkgs.fetchurl {
             url = "https://github.com/PalinGone-Master/palingoneos-updater/releases/download/v1.0/palin-gone-os-updater";
-            # Ce faux hachage va forcer Nix à hurler et à nous donner le vrai
-            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+           
+            hash = "sha256-qAdtPSjSHgIBKyDq99v3VAmmJ3E0Q5Al8oLjaOMwWr8=";
           };
 
           dontUnpack = true;
